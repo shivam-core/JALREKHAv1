@@ -1,1 +1,0 @@
-{"version": "1.0", "dataset_version": "v1-demo", "bounds": {"west": 73.845, "south": 18.504999999999995, "east": 73.895, "north": 18.549999999999997}, "levels": [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0], "crs": "EPSG:4326"}

@@ -1,0 +1,12 @@
+{
+  "city": "Pune - Mula-Mutha corridor",
+  "bbox": [73.78, 18.47, 73.93, 18.60],
+  "buffer_deg": 0.1,
+  "stream_threshold": 2000,
+  "burn_osm_rivers": true,
+  "cell_km": 1.0,
+  "people_per_node": 25,
+  "max_level": 8.0,
+  "level_step": 0.5,
+  "river_point": {"lat": 18.53, "lon": 73.86}
+}

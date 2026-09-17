@@ -1,1 +1,1 @@
-# make it a package
+"""JALREKHA engine: HAND, road graph preparation, scenarios, rendering."""

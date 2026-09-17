@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JALREKHA - what-if flood & evacuation twin</title>
+  <link href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <link href="style.css" rel="stylesheet" />
+</head>
+<body>
+  <div id="map"></div>
+
+  <header id="topbar">
+    <b>JALREKHA</b> <span class="sub">waterline · what-if flood &amp; evacuation twin</span>
+    <span id="source" class="badge">static data</span>
+    <button id="forecastBtn">Next 7 days (river forecast)</button>
+    <div id="forecast"></div>
+  </header>
+
+  <aside id="panel">
+    <div class="level"><span id="levelText">0.0</span> m</div>
+    <div class="label">water level above nearest drain</div>
+    <div class="stats">
+      <div><span id="sRisk">-</span><small>people at risk</small></div>
+      <div><span id="sAssigned">-</span><small>reach a shelter</small></div>
+      <div><span id="sUnassigned">-</span><small>no shelter space</small></div>
+      <div><span id="sIsolated">-</span><small>no dry road out</small></div>
+      <div><span id="sCut">-</span><small>road links cut</small></div>
+      <div><span id="sShelters">-</span><small>usable shelters</small></div>
+    </div>
+    <div class="toggles">
+      <label><input type="radio" name="plan" value="naive" /> Everyone to nearest shelter</label>
+      <label><input type="radio" name="plan" value="opt" checked /> Optimised plan</label>
+      <label><input type="checkbox" id="showWater" checked /> Show water &amp; cut roads</label>
+    </div>
+    <div id="alert"></div>
+    <div class="credits">DEM: Copernicus GLO-30 (ESA) · Roads/shelters: © OpenStreetMap contributors (ODbL) ·
+      River forecast: Open-Meteo.com (CC BY 4.0) · Planning twin, not a flood forecast.</div>
+  </aside>
+
+  <div id="sliderBox">
+    <input id="slider" type="range" min="0" max="8" step="0.5" value="0" orient="vertical" />
+  </div>
+  <div id="loading">computing…</div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

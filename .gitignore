@@ -1,2 +1,14 @@
-.vercel
+# large raw downloads - re-creatable from notebooks
+data/raw/
+*.graphml
+# python / notebook clutter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+# secrets - never commit
+.env
+*.token
 .venv-prep/
+.vercel/
+.venv/
+data/processed/
