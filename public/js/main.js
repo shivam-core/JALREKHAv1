@@ -10,21 +10,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const methodsBtn = document.getElementById('btn-methods');
 
     let map = null;
+    let currentScenario = null;
+    let baseMapLoaded = false;
     
-    // Check health
+    // Custom state
+    let customLevel = 0.0;
+    
+    initMap();
+
+    // Fetch meta
     try {
         statusMsg.innerText = "Connecting to API...";
         const health = await fetch('/api/health').then(r => r.json());
-        console.log("Health:", health);
         
         statusMsg.innerText = "Loading scenario...";
-        const scenario = await fetch('/api/scenario?h=0.0').then(r => r.json());
-        console.log("Scenario 0.0:", scenario);
-        
-        updateMetrics(scenario.totals);
-        statusMsg.innerText = "Ready. (Synthetic Demo)";
-        
-        initMap();
+        await fetchScenario(0.0);
     } catch (e) {
         console.error("API Error", e);
         statusMsg.innerText = "Error: Could not connect to API.";
@@ -36,21 +36,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     levelSlider.addEventListener('change', async (e) => {
         const val = parseFloat(e.target.value);
-        statusMsg.innerText = `Updating scenario to ${val}m...`;
-        try {
-            const scenario = await fetch(`/api/scenario?h=${val}`).then(r => r.json());
-            updateMetrics(scenario.totals);
-            statusMsg.innerText = "Ready.";
-        } catch (err) {
-            statusMsg.innerText = "Error fetching scenario.";
-        }
+        customLevel = val;
+        await fetchScenario(val);
     });
 
+    async function fetchScenario(h) {
+        statusMsg.innerText = `Updating scenario to ${h}m...`;
+        try {
+            const scenario = await fetch(`/api/scenario?h=${h}`).then(r => r.json());
+            currentScenario = scenario;
+            updateMetrics(scenario.totals);
+            updateMap(scenario);
+            statusMsg.innerText = "Ready.";
+        } catch (err) {
+            console.error(err);
+            statusMsg.innerText = "Error fetching scenario.";
+        }
+    }
+
     function updateMetrics(totals) {
+        if(!totals) return;
         document.getElementById('stat-pop').innerText = totals.population;
         document.getElementById('stat-alloc').innerText = totals.allocated;
         document.getElementById('stat-unalloc').innerText = totals.isolated + totals.capacity_unserved;
-        // Just placeholder for capacity
         document.getElementById('stat-cap').innerText = (totals.allocated + totals.capacity_unserved) || '-'; 
     }
 
@@ -82,5 +90,145 @@ document.addEventListener('DOMContentLoaded', async () => {
             center: [73.87, 18.53],
             zoom: 13
         });
+
+        map.on('load', () => {
+            baseMapLoaded = true;
+            if (currentScenario) {
+                updateMap(currentScenario);
+            }
+        });
+    }
+
+    function updateMap(scenario) {
+        if (!baseMapLoaded || !map) return;
+
+        // 1. Update Water Overlay
+        const hazard = scenario.hazard;
+        if (hazard) {
+            const sourceId = 'water-source';
+            const layerId = 'water-layer';
+            if (map.getSource(sourceId)) {
+                map.getSource(sourceId).updateImage({
+                    url: hazard.overlay_url,
+                    coordinates: hazard.image_coordinates
+                });
+            } else {
+                map.addSource(sourceId, {
+                    'type': 'image',
+                    'url': hazard.overlay_url,
+                    'coordinates': hazard.image_coordinates
+                });
+                map.addLayer({
+                    'id': layerId,
+                    'type': 'raster',
+                    'source': sourceId,
+                    'paint': {
+                        'raster-opacity': 0.6
+                    }
+                });
+            }
+        }
+        
+        // 2. Plot Allocations
+        const allocSourceId = 'alloc-source';
+        const allocLayerId = 'alloc-layer';
+        
+        let features = [];
+        if (scenario.allocations) {
+            scenario.allocations.forEach(a => {
+                if (a.geometry && a.geometry.length > 0) {
+                    features.push({
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": a.geometry
+                        },
+                        "properties": {
+                            "people": a.people,
+                            "travel": a.travel_seconds
+                        }
+                    });
+                }
+            });
+        }
+        
+        const geojson = {
+            "type": "FeatureCollection",
+            "features": features
+        };
+        
+        if (map.getSource(allocSourceId)) {
+            map.getSource(allocSourceId).setData(geojson);
+        } else {
+            map.addSource(allocSourceId, {
+                'type': 'geojson',
+                'data': geojson
+            });
+            map.addLayer({
+                'id': allocLayerId,
+                'type': 'line',
+                'source': allocSourceId,
+                'layout': {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                'paint': {
+                    'line-color': '#55D6BE',
+                    'line-width': 4
+                }
+            });
+        }
+        
+        // 3. Nodes (Origins / Shelters)
+        const nodeSourceId = 'node-source';
+        const nodeLayerId = 'node-layer';
+        let nFeatures = [];
+        if (scenario.origins) {
+            scenario.origins.forEach(o => {
+                nFeatures.push({
+                    "type": "Feature",
+                    "geometry": { "type": "Point", "coordinates": [o.lon, o.lat] },
+                    "properties": { "type": "origin", "id": o.id }
+                });
+            });
+        }
+        if (scenario.shelters) {
+            scenario.shelters.forEach(s => {
+                nFeatures.push({
+                    "type": "Feature",
+                    "geometry": { "type": "Point", "coordinates": [s.lon, s.lat] },
+                    "properties": { "type": "shelter", "id": s.id, "open": s.usable }
+                });
+            });
+        }
+        const nodeGeojson = {
+            "type": "FeatureCollection",
+            "features": nFeatures
+        };
+        if (map.getSource(nodeSourceId)) {
+            map.getSource(nodeSourceId).setData(nodeGeojson);
+        } else {
+            map.addSource(nodeSourceId, {
+                'type': 'geojson',
+                'data': nodeGeojson
+            });
+            map.addLayer({
+                'id': nodeLayerId,
+                'type': 'circle',
+                'source': nodeSourceId,
+                'paint': {
+                    'circle-radius': 6,
+                    'circle-color': [
+                        'match',
+                        ['get', 'type'],
+                        'origin', '#B5C2CA',
+                        'shelter', '#74C991',
+                        '#ccc'
+                    ],
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#111B24'
+                }
+            });
+        }
     }
 });
