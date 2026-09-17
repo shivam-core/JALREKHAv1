@@ -1,4 +1,4 @@
 # Status
-- Milestone: 1. `chore: establish build specification and deployment scaffold`
+- Milestone: 2. `feat: deploy FastAPI health endpoint and static interface`
 - Blockers: None
-- Next action: Deploy Vercel preview, check health endpoint.
+- Next action: Write data preparation scripts and feasibility check.
